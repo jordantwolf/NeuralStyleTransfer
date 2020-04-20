@@ -7,7 +7,8 @@ import numpy as np
 from PIL import Image
 import time
 import functools
-
+from google.colab import widgets, files
+%tensorflow_version 2.x
 import tensorflow as tf
 
 from tensorflow.python.keras.preprocessing import image as kp_image
@@ -101,6 +102,24 @@ def get_model():
 def get_content_loss(base_content, target):
   return tf.reduce_mean(tf.square(base_content - target))
 
+def deprocess_img(processed_img):
+  x = processed_img.copy()
+  if len(x.shape) == 4:
+    x = np.squeeze(x, 0)
+  assert len(x.shape) == 3, ("Input to deprocess image must be an image of "
+                             "dimension [1, height, width, channel] or [height, width, channel]")
+  if len(x.shape) != 3:
+    raise ValueError("Invalid input to deprocessing image")
+  
+  # perform the inverse of the preprocessiing step
+  x[:, :, 0] += 103.939
+  x[:, :, 1] += 116.779
+  x[:, :, 2] += 123.68
+  x = x[:, :, ::-1]
+
+  x = np.clip(x, 0, 255).astype('uint8')
+  return x
+  
 def gram_matrix(input_tensor):
   # We make the image channels first 
   channels = int(input_tensor.shape[-1])
@@ -117,6 +136,11 @@ def get_style_loss(base_style, gram_target):
   gram_style = gram_matrix(base_style)
   
   return tf.reduce_mean(tf.square(gram_style - gram_target))# / (4. * (channels ** 2) * (width * height) ** 2)
+
+def load_and_process_img(path_to_img):
+  img = load_img(path_to_img)
+  img = tf.keras.applications.vgg19.preprocess_input(img)
+  return img
 
 def get_feature_representations(model, content_path, style_path):
   """Helper function to compute our content and style feature representations.
@@ -252,7 +276,19 @@ def run_style_transfer(content_path,
   norm_means = np.array([103.939, 116.779, 123.68])
   min_vals = -norm_means
   max_vals = 255 - norm_means   
+  content_img = load_img(content_path).astype('uint8')
+  style_img = load_img(style_path).astype('uint8')
+
+  grid = widgets.Grid(1,3, header_row=True, header_column=True)
+
+  with grid.output_to(0, 0):
+    imshow(content_img, 'Content Image')
+  with grid.output_to(0,1):
+    imshow(style_img, 'Style Image')
   
+
+  plt.subplot(1,3,3)
+  plt.show()
   imgs = []
   for i in range(num_iterations):
     grads, all_loss = compute_grads(cfg)
@@ -267,27 +303,42 @@ def run_style_transfer(content_path,
       best_loss = loss
       best_img = deprocess_img(init_image.numpy())
 
-    if i % display_interval== 0:
+    if i % 20 == 0:
       start_time = time.time()
       
       # Use the .numpy() method to get the concrete numpy array
       plot_img = init_image.numpy()
       plot_img = deprocess_img(plot_img)
       imgs.append(plot_img)
-      IPython.display.clear_output(wait=True)
-      IPython.display.display_png(Image.fromarray(plot_img))
-      print('Iteration: {}'.format(i))        
-      print('Total loss: {:.4e}, ' 
-            'style loss: {:.4e}, '
-            'content loss: {:.4e}, '
-            'time: {:.4f}s'.format(loss, style_score, content_score, time.time() - start_time))
-  print('Total time: {:.4f}s'.format(time.time() - global_start))
-  IPython.display.clear_output(wait=True)
-  plt.figure(figsize=(14,4))
-  for i,img in enumerate(imgs):
-      plt.subplot(num_rows,num_cols,i+1)
-      plt.imshow(img)
-      plt.xticks([])
-      plt.yticks([])
+      
+      with grid.output_to(0,2):      
+        grid.clear_cell()
+        print('Content Image \n Transfer is {}% done, please be patient'.format(i/num_iterations *100))    
+        IPython.display.display_png(Image.fromarray(best_img))
+            
+      
       
   return best_img, best_loss 
+
+
+
+def transform_my_image():
+  print('Please upload the content image')
+  uploaded = files.upload()
+  content_path = [i for i in uploaded.keys()][0]
+
+  clear_output()
+
+  print('Okay that worked, now please upload the style image')
+  uploaded = files.upload()
+  style_path = [i for i in uploaded.keys()][0]
+
+  clear_output()
+
+  new_image = run_style_transfer(content_path, 
+                                     style_path, num_iterations=100)
+  
+  new_image = Image.fromarray(new_image)
+  new_image.save('style_transferred_image.jpg')
+
+  files.download('style_transferred_image.jpg')

@@ -8,7 +8,6 @@ from PIL import Image
 import time
 import functools
 from google.colab import widgets, files
-%tensorflow_version 2.x
 import tensorflow as tf
 
 from tensorflow.python.keras.preprocessing import image as kp_image

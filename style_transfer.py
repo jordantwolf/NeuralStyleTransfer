@@ -16,6 +16,7 @@ from tensorflow.python.keras import losses
 from tensorflow.python.keras import layers
 from tensorflow.python.keras import backend as K
 import IPython.display
+from IPython.display import clear_output
 
 # Content layer where will pull our feature maps
 content_layers = ['block5_conv2'] 

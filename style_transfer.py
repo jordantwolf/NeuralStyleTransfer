@@ -313,7 +313,7 @@ def run_style_transfer(content_path,
       
       with grid.output_to(0,2):      
         grid.clear_cell()
-        print('Content Image \n Transfer is {}% done, please be patient'.format(i/num_iterations *100))    
+        print('Transformed Image \n Transfer is {}% done, please be patient'.format(i/num_iterations *100))    
         IPython.display.display_png(Image.fromarray(best_img))
             
       

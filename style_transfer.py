@@ -336,7 +336,7 @@ def transform_my_image():
   clear_output()
 
   new_image = run_style_transfer(content_path, 
-                                     style_path, num_iterations=100)
+                                     style_path, num_iterations=500)
   
   new_image = Image.fromarray(new_image)
   new_image.save('style_transferred_image.jpg')
